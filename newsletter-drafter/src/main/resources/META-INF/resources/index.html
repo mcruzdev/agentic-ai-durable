@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Newsletter Drafter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 2rem; }
+        .spinner-container { min-height: 40vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        /* Add a soft fade to make view transitions look nice */
+        .fade-in { animation: fadeIn 0.4s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="container fade-in" style="max-width: 800px;">
+    <h2 class="mb-4 text-center text-primary">Intelligent Newsletter Drafter</h2>
+
+    <div id="request-view" class="card shadow-sm view-section">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Create New Newsletter</h5>
+            <form id="request-form">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Market Mood</label>
+                        <select id="input-mood" class="form-select">
+                            <option value="BULLISH">Bullish</option>
+                            <option value="BEARISH">Bearish</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Writing Tone</label>
+                        <select id="input-tone" class="form-select">
+                            <option value="FRIENDLY">Friendly</option>
+                            <option value="NEUTRAL">Neutral</option>
+                            <option value="FORMAL">Formal</option>
+                            <option value="CAUTIOUS">Cautious</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Length</label>
+                    <select id="input-length" class="form-select">
+                        <option value="SHORT">Short</option>
+                        <option value="MEDIUM" selected>Medium</option>
+                        <option value="LONG">Long</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Top Movers (Comma separated tickers)</label>
+                    <input type="text" id="input-movers" class="form-control" placeholder="e.g., AAPL, MSFT, TSLA" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Macro Data</label>
+                    <textarea id="input-macro" class="form-control" rows="3" placeholder="e.g., Fed expected to cut rates, tech sector rallying..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Generate Draft</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="loading-view" class="view-section text-center spinner-container d-none fade-in">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+        <h4 class="mt-4" id="loading-text">AI Agents are crafting your newsletter...</h4>
+        <p class="text-muted">Drafting -> Critiquing -> Applying internal edits</p>
+    </div>
+
+    <div id="review-view" class="card shadow-sm view-section border-warning d-none fade-in">
+        <div class="card-header bg-warning text-dark">
+            <strong>Human Review Required</strong>
+        </div>
+        <div class="card-body">
+            <form id="review-form">
+                <div id="review-alert" class="alert alert-info d-none"></div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Title</label>
+                    <input type="text" id="review-title" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Lead</label>
+                    <textarea id="review-lead" class="form-control" rows="2" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Body</label>
+                    <textarea id="review-body" class="form-control" rows="8" required></textarea>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-danger">Manager Notes (If AI revision needed)</label>
+                    <textarea id="review-notes" class="form-control border-danger" rows="2" placeholder="Tell the HumanEditorAgent what to change..."></textarea>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" id="btn-revise" class="btn btn-outline-danger px-4">Needs AI Revision</button>
+                    <button type="button" id="btn-approve" class="btn btn-success px-4">Approve & Send Email</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="success-view" class="view-section text-center spinner-container d-none fade-in">
+        <h1 class="text-success mb-3" style="font-size: 5rem;">✓</h1>
+        <h3>Newsletter Sent!</h3>
+        <p class="text-muted">Check your server console for the email logs.</p>
+        <button id="btn-reset" class="btn btn-outline-primary mt-3 px-5">Draft Another</button>
+    </div>
+
+</div>
+
+<script>
+    // --- State Management ---
+    function showView(viewId) {
+        // Add d-none to all sections to hide them completely
+        document.querySelectorAll('.view-section').forEach(el => el.classList.add('d-none'));
+        // Remove d-none from the target section
+        document.getElementById(viewId).classList.remove('d-none');
+    }
+
+    // --- WebSocket Setup ---
+    const wsProto = window.location.protocol === "https:" ? "wss://" : "ws://";
+    const socket = new WebSocket(wsProto + window.location.host + "/ws/newsletter");
+
+    socket.onmessage = function(event) {
+        console.log("WebSocket received:", event.data);
+        const payload = JSON.parse(event.data);
+
+        const draft = payload.data ? payload.data : payload;
+
+        // Check if we actually have a draft by looking for the 'title' property
+        if(draft && draft.title) {
+            // Populate Review Form
+            document.getElementById('review-title').value = draft.title || '';
+            document.getElementById('review-lead').value = draft.lead || '';
+            document.getElementById('review-body').value = draft.body || '';
+            document.getElementById('review-notes').value = '';
+
+            // Switch the UI to the Review screen!
+            showView('review-view');
+        } else {
+            console.warn("Received unknown WebSocket payload:", payload);
+        }
+    };
+
+    // --- Form Handlers ---
+
+    // 1. Submit Request
+    document.getElementById('request-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Format the string "AAPL, MSFT" into a clean JSON Array: ["AAPL", "MSFT"]
+        const rawMovers = document.getElementById('input-movers').value;
+        const moversArray = rawMovers.split(',').map(ticker => ticker.trim()).filter(t => t.length > 0);
+
+        const requestData = {
+            mood: document.getElementById('input-mood').value,
+            topMovers: moversArray,
+            macroData: document.getElementById('input-macro').value,
+            tone: document.getElementById('input-tone').value,
+            length: document.getElementById('input-length').value
+        };
+
+        fetch('/api/newsletter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestData)
+        }).then(response => {
+            if(response.ok) {
+                document.getElementById('loading-text').innerText = "AI Agents are crafting your newsletter...";
+                showView('loading-view');
+            } else {
+                alert("Failed to start workflow! Check server logs for Jackson mapping errors.");
+                console.error("Payload rejected:", requestData);
+            }
+        }).catch(err => alert("Network error: " + err));
+    });
+
+    // 2. Submit Review
+    function submitReview(status) {
+        const reviewData = {
+            status: status,
+            notes: document.getElementById('review-notes').value,
+            draft: {
+                title: document.getElementById('review-title').value,
+                lead: document.getElementById('review-lead').value,
+                body: document.getElementById('review-body').value
+            }
+        };
+
+        fetch('/api/newsletter', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reviewData)
+        }).then(response => {
+            if(response.ok) {
+                if(status === 'NEEDS_REVISION') {
+                    document.getElementById('loading-text').innerText = "HumanEditorAgent is applying your notes...";
+                    showView('loading-view');
+                } else {
+                    showView('success-view');
+                }
+            } else {
+                alert("Failed to submit review.");
+            }
+        });
+    }
+
+    // 3. Button Listeners for Review Form
+    document.getElementById('btn-revise').addEventListener('click', () => submitReview('NEEDS_REVISION'));
+    document.getElementById('btn-approve').addEventListener('click', () => submitReview('DONE'));
+
+    // 4. Reset App
+    document.getElementById('btn-reset').addEventListener('click', () => {
+        document.getElementById('request-form').reset();
+        showView('request-view');
+    });
+</script>
+
+</body>
+</html>
