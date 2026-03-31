@@ -16,8 +16,8 @@ data:
           - targets:
               - localhost:9090
 
-      - job_name: durable-flow-demo
+      - job_name: newsletter-drafter
         metrics_path: /q/metrics
         static_configs:
           - targets:
-              - durable-flow-demo.default.svc.cluster.local:80
+              - newsletter-drafter.default.svc.cluster.local:80
