@@ -22,3 +22,23 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Helm chart artifacts
+*.tgz
+**/charts/*.tgz
+**/charts/*.tar.gz
+**/charts/*.prov
+
+# Local Helm values overrides (machine/environment specific)
+**/values.local.yaml
+**/values-*.local.yaml
+**/values.*.local.yaml
+
+# Secret values files (keep encrypted variants only if you use them)
+**/values.secret.yaml
+**/values.secrets.yaml
+**/values.secret-*.yaml
+**/values.secrets-*.yaml
+
+
+.idea
