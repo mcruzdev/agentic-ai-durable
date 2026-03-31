@@ -8,9 +8,9 @@ data:
   datasource.yaml: |
     apiVersion: 1
     datasources:
-      - name: Prometheus
+      - name: prometheus
         type: prometheus
         access: proxy
-        url: http://prometheus:9090
+        url: http://prometheus.default.svc.cluster.local:9090
         isDefault: true
         editable: true
