@@ -67,6 +67,11 @@
         </dependency>
         <dependency>
             <groupId>io.quarkiverse.flow</groupId>
+            <artifactId>quarkus-flow-durable-kubernetes</artifactId>
+            <version>${quarkus.flow.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.flow</groupId>
             <artifactId>quarkus-flow-redis</artifactId>
             <version>${quarkus.flow.version}</version>
         </dependency>
@@ -78,6 +83,7 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-smallrye-health</artifactId>
         </dependency>
+
 
 <!--        test -->
         <dependency>
@@ -154,6 +160,27 @@
                 <skipITs>false</skipITs>
                 <quarkus.native.enabled>true</quarkus.native.enabled>
             </properties>
+        </profile>
+        <profile>
+            <id>kind</id>
+            <properties>
+                <quarkus.profile>kind</quarkus.profile>
+            </properties>
+            <dependencies>
+                <!-- KIND/Kubernetes profile to facilitate deployment and image build -->
+                <dependency>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-kubernetes</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-kind</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-container-image-jib</artifactId>
+                </dependency>
+            </dependencies>
         </profile>
     </profiles>
 </project>
