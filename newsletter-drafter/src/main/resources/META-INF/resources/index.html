@@ -11,12 +11,29 @@
         /* Add a soft fade to make view transitions look nice */
         .fade-in { animation: fadeIn 0.4s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .connection-status { border-radius: 999px; padding: 0.35rem 0.75rem; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.45rem; }
+        .connection-status-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; }
+        .connection-connecting { background: #e7f1ff; color: #084298; }
+        .connection-connecting .connection-status-dot { background: #0d6efd; }
+        .connection-connected { background: #e9f7ef; color: #146c43; }
+        .connection-connected .connection-status-dot { background: #198754; }
+        .connection-reconnecting { background: #fff3cd; color: #997404; }
+        .connection-reconnecting .connection-status-dot { background: #ffc107; }
+        .connection-disconnected { background: #f8d7da; color: #842029; }
+        .connection-disconnected .connection-status-dot { background: #dc3545; }
     </style>
 </head>
 <body>
 
 <div class="container fade-in" style="max-width: 800px;">
-    <h2 class="mb-4 text-center text-primary">Intelligent Newsletter Drafter</h2>
+    <h2 class="mb-2 text-center text-primary">Intelligent Newsletter Drafter</h2>
+    <div class="text-center mb-4">
+        <span id="connection-status" class="connection-status connection-connecting" role="status" aria-live="polite">
+            <span class="connection-status-dot" aria-hidden="true"></span>
+            <span id="connection-status-text">Connecting...</span>
+        </span>
+    </div>
 
     <div id="request-view" class="card shadow-sm view-section">
         <div class="card-body">
@@ -127,16 +144,56 @@
 
     // --- WebSocket Setup ---
     const wsProto = window.location.protocol === "https:" ? "wss://" : "ws://";
-    const socket = new WebSocket(wsProto + window.location.host + "/ws/newsletter");
+    const wsUrl = wsProto + window.location.host + "/ws/newsletter";
+    const reconnectBaseDelayMs = 1000;
+    const reconnectMaxDelayMs = 10000;
 
-    socket.onmessage = function(event) {
+    let socket = null;
+    let reconnectTimer = null;
+    let reconnectAttempts = 0;
+    let isPageUnloading = false;
+
+    const connectionStatus = document.getElementById('connection-status');
+    const connectionStatusText = document.getElementById('connection-status-text');
+
+    function updateConnectionStatus(state, text) {
+        connectionStatus.classList.remove('connection-connecting', 'connection-connected', 'connection-reconnecting', 'connection-disconnected');
+        connectionStatus.classList.add('connection-' + state);
+        connectionStatusText.innerText = text;
+    }
+
+    function clearReconnectTimer() {
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+    }
+
+    function scheduleReconnect() {
+        if (reconnectTimer || isPageUnloading) {
+            return;
+        }
+
+        const delay = Math.min(reconnectBaseDelayMs * Math.pow(2, reconnectAttempts), reconnectMaxDelayMs);
+        reconnectAttempts += 1;
+        updateConnectionStatus('reconnecting', 'Disconnected. Retrying in ' + Math.ceil(delay / 1000) + 's...');
+
+        reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+            connectWebSocket();
+        }, delay);
+
+        console.warn("WebSocket disconnected. Retrying in", delay, "ms");
+    }
+
+    function handleSocketMessage(event) {
         console.log("WebSocket received:", event.data);
         const payload = JSON.parse(event.data);
 
         const draft = payload.data ? payload.data : payload;
 
         // Check if we actually have a draft by looking for the 'title' property
-        if(draft && draft.title) {
+        if (draft && draft.title) {
             // Populate Review Form
             document.getElementById('review-title').value = draft.title || '';
             document.getElementById('review-lead').value = draft.lead || '';
@@ -148,12 +205,67 @@
         } else {
             console.warn("Received unknown WebSocket payload:", payload);
         }
-    };
+    }
+
+    function connectWebSocket() {
+        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+            return;
+        }
+
+        updateConnectionStatus('connecting', 'Connecting...');
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = function() {
+            reconnectAttempts = 0;
+            clearReconnectTimer();
+            updateConnectionStatus('connected', 'Connected');
+            console.log("WebSocket connected");
+        };
+
+        socket.onmessage = handleSocketMessage;
+
+        socket.onerror = function(error) {
+            updateConnectionStatus('disconnected', 'Connection error');
+            console.error("WebSocket error:", error);
+            if (socket && socket.readyState !== WebSocket.CLOSED) {
+                socket.close();
+            }
+        };
+
+        socket.onclose = function() {
+            if (isPageUnloading) {
+                updateConnectionStatus('disconnected', 'Disconnected');
+                return;
+            }
+            scheduleReconnect();
+        };
+    }
+
+    connectWebSocket();
+
+    // Prevent orphan reconnect attempts when navigating away.
+    window.addEventListener('beforeunload', () => {
+        isPageUnloading = true;
+        clearReconnectTimer();
+        if (socket && socket.readyState !== WebSocket.CLOSED) {
+            socket.close();
+        }
+    });
 
     // --- Form Handlers ---
 
     // 1. Submit Request
-    document.getElementById('request-form').addEventListener('submit', function(e) {
+    const requestForm = document.getElementById('request-form');
+
+    // Submit with Enter from non-textarea fields.
+    requestForm.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            requestForm.requestSubmit();
+        }
+    });
+
+    requestForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
         // Format the string "AAPL, MSFT" into a clean JSON Array: ["AAPL", "MSFT"]
