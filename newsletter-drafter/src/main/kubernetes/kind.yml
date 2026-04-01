@@ -5,3 +5,15 @@ metadata:
 data:
   QUARKUS_REDIS_HOSTS: "redis://redis.default.svc.cluster.local:6379"
   MP_MESSAGING_CONNECTOR_SMALLRYE_KAFKA_BOOTSTRAP_SERVERS: "PLAIN_TEXT://kafka.default.svc.cluster.local:9092"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: newsletter-drafter
+spec:
+  strategy:
+    type: Recreate
+  template:
+     spec:
+       containers:
+         - name: newsletter-drafter
