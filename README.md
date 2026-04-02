@@ -23,15 +23,35 @@ Useful local endpoints:
 - Health: <http://localhost:8080/q/health>
 - Metrics: <http://localhost:8080/q/metrics>
 
+
+## Building Kubernetes manifests
+
+This command only build Kubernetes manifests, it does not deploy the image to Kubernetes cluster.
+
+```shell
+./mvnw clean package -Dquarkus.kubernetes.deploy=false
+```
+
+## Building and pushing the image
+
+This command:
+
+1. Build the application
+2. Push the container image to a container registry 
+3. And finally deploy your application into the Kubernetes cluster.
+
+```shell
+./mvnw clean package -Pkind -Dquarkus.container-image.push=true -Dquarkus.container-image.image=<username>/newsletter-drafter:latest
+```
+
 ## Kubernetes deployment (manifests only)
 
 ---
 **NOTE**
 
-Before deploying, edit `/k8s/agentic-ai-manifests/newsletter-drafter.yaml` and set the `OPENAI_API_KEY` environment variable.
+Before deploying, edit `/k8s/agentic-ai-manifests/openai-secret.yaml` and set put `api-key` value.
 
 ---
-
 
 This project uses plain Kubernetes manifests.
 

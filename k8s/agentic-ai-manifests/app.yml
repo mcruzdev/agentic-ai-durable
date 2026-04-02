@@ -1,0 +1,240 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    app.quarkus.io/quarkus-version: 3.34.1
+    app.quarkus.io/commit-id: 16f4937ecd5bd0ff7aa824bfd94132ee72e6e12b
+    app.quarkus.io/vcs-uri: https://github.com/mcruzdev/agentic-ai-durable.git
+    app.quarkus.io/build-timestamp: 2026-04-02 - 01:22:45 +0000
+  labels:
+    app: newsletter-drafter
+    app.kubernetes.io/managed-by: quarkus
+    app.kubernetes.io/name: newsletter-drafter
+    app.kubernetes.io/part-of: quarkus-flow
+    app.kubernetes.io/version: 1.0.0-SNAPSHOT
+  name: newsletter-drafter
+  namespace: default
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infra-config
+  namespace: default
+data:
+  QUARKUS_REDIS_HOSTS: redis://redis.default.svc.cluster.local:6379
+  MP_MESSAGING_CONNECTOR_SMALLRYE_KAFKA_BOOTSTRAP_SERVERS: PLAIN_TEXT://kafka.default.svc.cluster.local:9092
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  annotations:
+    app.quarkus.io/quarkus-version: 3.34.1
+    app.quarkus.io/commit-id: 16f4937ecd5bd0ff7aa824bfd94132ee72e6e12b
+    app.quarkus.io/vcs-uri: https://github.com/mcruzdev/agentic-ai-durable.git
+    app.quarkus.io/build-timestamp: 2026-04-02 - 01:22:45 +0000
+  labels:
+    app: newsletter-drafter
+    app.kubernetes.io/managed-by: quarkus
+    app.kubernetes.io/name: newsletter-drafter
+    app.kubernetes.io/part-of: quarkus-flow
+    app.kubernetes.io/version: 1.0.0-SNAPSHOT
+  name: newsletter-drafter
+  namespace: default
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    app.quarkus.io/quarkus-version: 3.34.1
+    app.quarkus.io/commit-id: 16f4937ecd5bd0ff7aa824bfd94132ee72e6e12b
+    app.quarkus.io/vcs-uri: https://github.com/mcruzdev/agentic-ai-durable.git
+    app.quarkus.io/build-timestamp: 2026-04-02 - 01:22:45 +0000
+  labels:
+    app: newsletter-drafter
+    app.kubernetes.io/managed-by: quarkus
+    app.kubernetes.io/name: newsletter-drafter
+    app.kubernetes.io/part-of: quarkus-flow
+    app.kubernetes.io/version: 1.0.0-SNAPSHOT
+  name: newsletter-drafter
+  namespace: default
+roleRef:
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+  name: newsletter-drafter
+subjects:
+  - kind: ServiceAccount
+    name: newsletter-drafter
+    namespace: default
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    app.quarkus.io/quarkus-version: 3.34.1
+    app.quarkus.io/commit-id: 16f4937ecd5bd0ff7aa824bfd94132ee72e6e12b
+    app.quarkus.io/vcs-uri: https://github.com/mcruzdev/agentic-ai-durable.git
+    app.quarkus.io/build-timestamp: 2026-04-02 - 01:22:45 +0000
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /q/metrics
+    prometheus.io/port: "8080"
+    prometheus.io/scheme: http
+  labels:
+    app.kubernetes.io/name: newsletter-drafter
+    app.kubernetes.io/part-of: quarkus-flow
+    app.kubernetes.io/version: 1.0.0-SNAPSHOT
+    app: newsletter-drafter
+    app.kubernetes.io/managed-by: quarkus
+  name: newsletter-drafter
+  namespace: default
+spec:
+  ports:
+    - name: http
+      nodePort: 31355
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: newsletter-drafter
+    app.kubernetes.io/part-of: quarkus-flow
+    app.kubernetes.io/version: 1.0.0-SNAPSHOT
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    app.quarkus.io/quarkus-version: 3.34.1
+    app.quarkus.io/commit-id: 16f4937ecd5bd0ff7aa824bfd94132ee72e6e12b
+    app.quarkus.io/vcs-uri: https://github.com/mcruzdev/agentic-ai-durable.git
+    app.quarkus.io/build-timestamp: 2026-04-02 - 01:22:45 +0000
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /q/metrics
+    prometheus.io/port: "8080"
+    prometheus.io/scheme: http
+  labels:
+    app: newsletter-drafter
+    app.kubernetes.io/managed-by: quarkus
+    app.kubernetes.io/name: newsletter-drafter
+    app.kubernetes.io/part-of: quarkus-flow
+    app.kubernetes.io/version: 1.0.0-SNAPSHOT
+  name: newsletter-drafter
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: newsletter-drafter
+      app.kubernetes.io/part-of: quarkus-flow
+      app.kubernetes.io/version: 1.0.0-SNAPSHOT
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        app.quarkus.io/quarkus-version: 3.34.1
+        app.quarkus.io/commit-id: 16f4937ecd5bd0ff7aa824bfd94132ee72e6e12b
+        app.quarkus.io/vcs-uri: https://github.com/mcruzdev/agentic-ai-durable.git
+        app.quarkus.io/build-timestamp: 2026-04-02 - 01:22:45 +0000
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /q/metrics
+        prometheus.io/port: "8080"
+        prometheus.io/scheme: http
+      labels:
+        app: newsletter-drafter
+        app.kubernetes.io/managed-by: quarkus
+        app.kubernetes.io/name: newsletter-drafter
+        app.kubernetes.io/part-of: quarkus-flow
+        app.kubernetes.io/version: 1.0.0-SNAPSHOT
+    spec:
+      containers:
+        - env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: api-key
+                  name: openai-credentials
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: QUARKUS_FLOW_TRACING_ENABLED
+              value: "true"
+            - name: QUARKUS_LANGCHAIN4J_LOG_REQUESTS
+              value: "false"
+            - name: QUARKUS_LANGCHAIN4J_LOG_RESPONSES
+              value: "false"
+            - name: QUARKUS_FLOW_METRICS_DURATIONS_PERCENTILES
+              value: "0.5,0.95,0.99"
+          envFrom:
+            - configMapRef:
+                name: infra-config
+          image: matheuscruzdev/newsletter-drafter:0.1.0-rc.1
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /q/health/live
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          name: newsletter-drafter
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /q/health/ready
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          startupProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /q/health/started
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+      serviceAccountName: newsletter-drafter
