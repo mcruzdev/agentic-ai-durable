@@ -1,0 +1,31 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [ mysql, mssql, postgresql, h2, oracle ]
+    name: build (${{ matrix.profile }})
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build ${{ matrix.profile }}
+        working-directory: newsletter-drafter
+        run: mvn -B clean package -P${{ matrix.profile }}
