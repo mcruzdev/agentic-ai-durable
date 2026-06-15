@@ -16,7 +16,7 @@
         <quarkus.platform.version>3.34.1</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.4</surefire-plugin.version>
-        <quarkus.flow.version>1.0.0-SNAPSHOT</quarkus.flow.version>
+        <quarkus.flow.version>0.10.2</quarkus.flow.version>
         <io.quarkiverse.langchain4j.version>1.8.4</io.quarkiverse.langchain4j.version>
     </properties>
 
